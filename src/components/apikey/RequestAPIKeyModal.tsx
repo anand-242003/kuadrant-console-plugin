@@ -37,9 +37,14 @@ import '../kuadrant.css';
 interface RequestAPIKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
+  username: string;
 }
 
-const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose }) => {
+const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
+  isOpen,
+  onClose,
+  username,
+}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
 
@@ -181,6 +186,12 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     setIsTierSelectOpen(!isTierSelectOpen);
   };
 
+  const sanitizeUsernameForEmail = (username: string): string => {
+    // Replace characters not allowed in email local part with hyphen
+    // Email regex allows: [a-zA-Z0-9._%+-]
+    return username.replace(/[^a-zA-Z0-9._%+-]/g, '-');
+  };
+
   const validateApiKeyName = (name: string): string => {
     if (!name) {
       return t('API key name is required');
@@ -209,7 +220,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
   const handleSubmit = async () => {
     // Validate required fields
-    if (!selectedAPIProduct || !selectedTier || !apiKeyName) {
+    if (!username || !selectedAPIProduct || !selectedTier || !apiKeyName) {
       return;
     }
 
@@ -222,6 +233,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     setSubmitError('');
 
     try {
+      const sanitizedUsername = sanitizeUsernameForEmail(username);
       const apiKeyResource: APIKey = {
         apiVersion: `${RESOURCES.APIKey.gvk.group}/${RESOURCES.APIKey.gvk.version}`,
         kind: RESOURCES.APIKey.gvk.kind,
@@ -234,6 +246,10 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
             name: selectedAPIProduct,
           },
           planTier: selectedTier,
+          requestedBy: {
+            userId: username,
+            email: `${sanitizedUsername}@example.com`,
+          },
           ...(useCase && { useCase }),
         },
       };

@@ -45,6 +45,7 @@ export interface APIKey extends K8sResourceCommon {
     planTier?: string;
     requestedBy?: {
       userId: string;
+      email: string;
     };
     useCase?: string;
   };

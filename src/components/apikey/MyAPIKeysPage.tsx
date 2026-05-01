@@ -24,6 +24,7 @@ import {
   DropdownList,
   DropdownItem,
   Button,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   useActiveNamespace,
@@ -36,6 +37,7 @@ import {
   ListPageBody,
   ResourceLink,
   k8sDelete,
+  consoleFetchJSON,
 } from '@openshift-console/dynamic-plugin-sdk';
 import {
   SearchIcon,
@@ -56,11 +58,57 @@ const MyAPIKeysPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
 
+  const [username, setUsername] = React.useState<string>('');
+  const [usernameLoaded, setUsernameLoaded] = React.useState(false);
+
   const [apiKeys, loaded, apiKeysLoadError] = useK8sWatchResource<APIKey[]>({
     groupVersionKind: RESOURCES.APIKey.gvk,
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  // Fetch current username (works in both MicroShift and OpenShift)
+  React.useEffect(() => {
+    const fetchUsername = async () => {
+      try {
+        // Try OpenShift User API first (OpenShift 4.x)
+        try {
+          console.log('Fetching username via OpenShift User API...');
+          const user: any = await consoleFetchJSON('/api/kubernetes/apis/user.openshift.io/v1/users/~');
+          if (user?.metadata?.name) {
+            console.log('Username fetched successfully:', user.metadata.name);
+            setUsername(user.metadata.name);
+            setUsernameLoaded(true);
+            return;
+          }
+        } catch (openshiftError) {
+          console.log('OpenShift User API not available, trying Kubernetes SelfSubjectReview...');
+        }
+
+        // Fallback: Try Kubernetes SelfSubjectReview (K8s 1.27+, MicroShift)
+        const response: any = await consoleFetchJSON.post(
+          '/api/kubernetes/apis/authentication.k8s.io/v1/selfsubjectreviews',
+          {
+            apiVersion: 'authentication.k8s.io/v1',
+            kind: 'SelfSubjectReview',
+          },
+        );
+
+        const username = response?.status?.userInfo?.username;
+        if (username) {
+          console.log('Username fetched successfully:', username);
+          setUsername(username);
+        } else {
+          console.warn('Username not found in response');
+        }
+      } catch (error) {
+        console.error('Failed to fetch username:', error);
+      } finally {
+        setUsernameLoaded(true);
+      }
+    };
+    fetchUsername();
+  }, []);
 
   const renderStatus = (phase?: string) => {
     if (phase === 'Approved') {
@@ -367,13 +415,29 @@ const MyAPIKeysPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title headingLevel="h1">{t('My API Keys')}</Title>
-          <Button
-            variant="primary"
-            onClick={() => setIsRequestModalOpen(true)}
-            isDisabled={!canCreate || activeNamespace === '#ALL_NS#'}
-          >
-            {t('Request API Key')}
-          </Button>
+          {canCreate && activeNamespace !== '#ALL_NS#' && usernameLoaded && username ? (
+            <Button variant="primary" onClick={() => setIsRequestModalOpen(true)}>
+              {t('Request API Key')}
+            </Button>
+          ) : (
+            <Tooltip
+              content={
+                activeNamespace === '#ALL_NS#'
+                  ? t('Select a namespace to request an API Key')
+                  : !canCreate
+                    ? t('You do not have permission to request an API Key')
+                    : !usernameLoaded
+                      ? t('Loading user information...')
+                      : !username
+                        ? t('Unable to fetch user information. Please try refreshing the page.')
+                        : ''
+              }
+            >
+              <Button variant="primary" isAriaDisabled>
+                {t('Request API Key')}
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </PageSection>
       <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
@@ -545,6 +609,7 @@ const MyAPIKeysPage: React.FC = () => {
       <RequestAPIKeyModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
+        username={username}
       />
     </>
   );
