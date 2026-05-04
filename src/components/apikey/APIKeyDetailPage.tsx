@@ -25,10 +25,13 @@ import {
   ExclamationCircleIcon,
 } from '@patternfly/react-icons';
 import { Link } from 'react-router-dom-v5-compat';
-import { useK8sWatchResource, k8sDelete } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  useK8sWatchResource,
+  k8sDelete,
+  useAccessReview,
+} from '@openshift-console/dynamic-plugin-sdk';
 import { RESOURCES, APIKey } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
-import useAccessReviews from '../../utils/resourceRBAC';
 import APIKeyDetailsTab from './APIKeyDetailsTab';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import '../kuadrant.css';
@@ -61,16 +64,12 @@ const APIKeyDetailPage: React.FC = () => {
   const apiKeyToUse = apiKey || cachedAPIKey;
 
   // RBAC permission checks
-  const resourceName = getResourceNameFromKind('APIKey');
-  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
-    {
-      group: RESOURCES.APIKey.gvk.group,
-      kind: resourceName,
-      namespace: ns,
-    },
-  ];
-  const { userRBAC, loading: rbacLoading } = useAccessReviews(resourceGVK);
-  const canDelete = userRBAC[`${resourceName}-delete`];
+  const [canDelete, rbacLoading] = useAccessReview({
+    group: RESOURCES.APIKey.gvk.group,
+    resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+    verb: 'delete',
+    namespace: ns,
+  });
 
   const handleDeleteClick = () => {
     setIsDeleteModalOpen(true);

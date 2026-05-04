@@ -38,6 +38,7 @@ import {
   ResourceLink,
   k8sDelete,
   consoleFetchJSON,
+  useAccessReview,
 } from '@openshift-console/dynamic-plugin-sdk';
 import {
   SearchIcon,
@@ -48,7 +49,6 @@ import {
 } from '@patternfly/react-icons';
 import { RESOURCES, APIKey } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
-import useAccessReviews from '../../utils/resourceRBAC';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
@@ -152,17 +152,38 @@ const MyAPIKeysPage: React.FC = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
 
   // RBAC permission checks
-  const resourceName = getResourceNameFromKind('APIKey');
-  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
-    {
-      group: RESOURCES.APIKey.gvk.group,
-      kind: resourceName,
-      namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
-    },
-  ];
-  const { userRBAC } = useAccessReviews(resourceGVK);
-  const canCreate = userRBAC[`${resourceName}-create`];
-  const canDelete = userRBAC[`${resourceName}-delete`];
+  const isAllNamespaces = activeNamespace === '#ALL_NS#';
+  const [canCreate, canCreateLoading] = useAccessReview(
+    !isAllNamespaces
+      ? {
+          group: RESOURCES.APIKey.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+          verb: 'create',
+          namespace: activeNamespace,
+        }
+      : {
+          group: RESOURCES.APIKey.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+          verb: 'create',
+          namespace: '',
+        },
+  );
+
+  const [canDelete, canDeleteLoading] = useAccessReview(
+    !isAllNamespaces
+      ? {
+          group: RESOURCES.APIKey.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+          verb: 'delete',
+          namespace: activeNamespace,
+        }
+      : {
+          group: RESOURCES.APIKey.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+          verb: 'delete',
+          namespace: '',
+        },
+  );
 
   // Filter data based on filter type and value
   const filteredData = React.useMemo(() => {
@@ -399,7 +420,7 @@ const MyAPIKeysPage: React.FC = () => {
                   setIsKebabOpen(false);
                   handleDeleteClick(obj);
                 }}
-                isDisabled={!canDelete}
+                isDisabled={canDeleteLoading || !canDelete}
               >
                 {t('Delete')}
               </DropdownItem>
@@ -415,7 +436,11 @@ const MyAPIKeysPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title headingLevel="h1">{t('My API Keys')}</Title>
-          {canCreate && activeNamespace !== '#ALL_NS#' && usernameLoaded && username ? (
+          {!canCreateLoading &&
+          canCreate &&
+          activeNamespace !== '#ALL_NS#' &&
+          usernameLoaded &&
+          username ? (
             <Button variant="primary" onClick={() => setIsRequestModalOpen(true)}>
               {t('Request API Key')}
             </Button>
@@ -426,7 +451,7 @@ const MyAPIKeysPage: React.FC = () => {
                   ? t('Select a namespace to request an API Key')
                   : !canCreate
                     ? t('You do not have permission to request an API Key')
-                    : !usernameLoaded
+                    : !usernameLoaded || canCreateLoading
                       ? t('Loading user information...')
                       : !username
                         ? t('Unable to fetch user information. Please try refreshing the page.')
