@@ -85,7 +85,7 @@ const APIKeyDetailPage: React.FC = () => {
       setIsDeleteModalOpen(false);
       setDeleteError('');
       // Navigate back to list page
-      navigate(`/kuadrant/ns/${ns}/myapikeys`);
+      navigate(`/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIKey`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setDeleteError(errorMessage);
@@ -149,7 +149,9 @@ const APIKeyDetailPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <Breadcrumb>
           <BreadcrumbItem>
-            <Link to={`/kuadrant/ns/${ns}/myapikeys`}>{t('My API Keys')}</Link>
+            <Link to={`/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIKey`}>
+              {t('My API Keys')}
+            </Link>
           </BreadcrumbItem>
           <BreadcrumbItem isActive>{apiKeyToUse.metadata.name}</BreadcrumbItem>
         </Breadcrumb>
