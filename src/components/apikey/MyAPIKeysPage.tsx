@@ -74,7 +74,9 @@ const MyAPIKeysPage: React.FC = () => {
         // Try OpenShift User API first (OpenShift 4.x)
         try {
           console.log('Fetching username via OpenShift User API...');
-          const user: any = await consoleFetchJSON('/api/kubernetes/apis/user.openshift.io/v1/users/~');
+          const user: any = await consoleFetchJSON(
+            '/api/kubernetes/apis/user.openshift.io/v1/users/~',
+          );
           if (user?.metadata?.name) {
             console.log('Username fetched successfully:', user.metadata.name);
             setUsername(user.metadata.name);
@@ -450,12 +452,12 @@ const MyAPIKeysPage: React.FC = () => {
                 activeNamespace === '#ALL_NS#'
                   ? t('Select a namespace to request an API Key')
                   : !canCreate
-                    ? t('You do not have permission to request an API Key')
-                    : !usernameLoaded || canCreateLoading
-                      ? t('Loading user information...')
-                      : !username
-                        ? t('Unable to fetch user information. Please try refreshing the page.')
-                        : ''
+                  ? t('You do not have permission to request an API Key')
+                  : !usernameLoaded || canCreateLoading
+                  ? t('Loading user information...')
+                  : !username
+                  ? t('Unable to fetch user information. Please try refreshing the page.')
+                  : ''
               }
             >
               <Button variant="primary" isAriaDisabled>

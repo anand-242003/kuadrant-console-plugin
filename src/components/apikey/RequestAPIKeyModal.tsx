@@ -40,11 +40,7 @@ interface RequestAPIKeyModalProps {
   username: string;
 }
 
-const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
-  isOpen,
-  onClose,
-  username,
-}) => {
+const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose, username }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
 
@@ -200,7 +196,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
     const validPattern = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
     if (!validPattern.test(name)) {
       return t(
-        'Must consist of lowercase alphanumeric characters or \'-\', and must start and end with an alphanumeric character',
+        "Must consist of lowercase alphanumeric characters or '-', and must start and end with an alphanumeric character",
       );
     }
     if (name.length > 253) {
@@ -282,7 +278,9 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
             title={t('No API Products available')}
             style={{ marginBottom: '16px' }}
           >
-            {t('There are no API Products available to request access. Please contact your administrator.')}
+            {t(
+              'There are no API Products available to request access. Please contact your administrator.',
+            )}
           </Alert>
         )}
         <Form>
@@ -333,7 +331,9 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
             </Select>
             <FormHelperText>
               <HelperText>
-                <HelperTextItem>{t('Each API Key is restricted to a single API product')}</HelperTextItem>
+                <HelperTextItem>
+                  {t('Each API Key is restricted to a single API product')}
+                </HelperTextItem>
               </HelperText>
             </FormHelperText>
           </FormGroup>
@@ -364,7 +364,10 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
                 </MenuToggle>
               )}
             >
-              <SelectList id="tier-select-listbox" style={{ maxHeight: '168px', overflowY: 'auto' }}>
+              <SelectList
+                id="tier-select-listbox"
+                style={{ maxHeight: '168px', overflowY: 'auto' }}
+              >
                 {filteredPlans.length === 0 ? (
                   <SelectOption isDisabled>{t('No results found')}</SelectOption>
                 ) : (
@@ -444,7 +447,11 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({
               variant={ButtonVariant.primary}
               onClick={handleSubmit}
               isDisabled={
-                !selectedAPIProduct || !selectedTier || !apiKeyName || !!apiKeyNameError || isSubmitting
+                !selectedAPIProduct ||
+                !selectedTier ||
+                !apiKeyName ||
+                !!apiKeyNameError ||
+                isSubmitting
               }
               isLoading={isSubmitting}
             >
