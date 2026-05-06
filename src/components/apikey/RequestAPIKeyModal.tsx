@@ -67,6 +67,13 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     isList: true,
   });
 
+  // Fetch existing API Keys in the current namespace for validation
+  const [existingApiKeys, existingApiKeysLoaded] = useK8sWatchResource<APIKey[]>({
+    groupVersionKind: RESOURCES.APIKey.gvk,
+    namespace: activeNamespace,
+    isList: true,
+  });
+
   // Filter only active API products (not being deleted) that have discovered plans
   const activeAPIProducts = React.useMemo(() => {
     return apiProducts.filter(
@@ -199,9 +206,22 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
         "Must consist of lowercase alphanumeric characters or '-', and must start and end with an alphanumeric character",
       );
     }
-    if (name.length > 253) {
-      return t('Must be no more than 253 characters');
+    if (name.length > 63) {
+      return t('Must be no more than 63 characters');
     }
+
+    if (!existingApiKeysLoaded) {
+      return '';
+    }
+
+    const isDuplicate = (existingApiKeys || []).some(
+      (k) => k.metadata?.name?.toLowerCase() === name.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return t('An API key with this name already exists. Please choose a different name.');
+    }
+
     return '';
   };
 
@@ -210,6 +230,14 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     const error = validateApiKeyName(value);
     setApiKeyNameError(error);
   };
+
+  // Re-run validation when API keys load or change
+  React.useEffect(() => {
+    if (apiKeyName && existingApiKeysLoaded) {
+      setApiKeyNameError(validateApiKeyName(apiKeyName));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingApiKeysLoaded, existingApiKeys]);
 
   const hasNoAPIProducts = apiProductsLoaded && activeAPIProducts.length === 0;
   const isApiKeyNameValid = apiKeyName && !apiKeyNameError;
@@ -220,8 +248,10 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
       return;
     }
 
-    // Check for validation errors
-    if (apiKeyNameError) {
+    // Double check for validation errors directly to act as a strict guard
+    const currentNameError = validateApiKeyName(apiKeyName);
+    if (currentNameError) {
+      setApiKeyNameError(currentNameError);
       return;
     }
 
